@@ -1,0 +1,9 @@
+streamlit
+google-generativeai
+protobuf
+google-api-core
+google-auth
+google-auth-oauthlib
+requests
+typing-extensions
+python-dotenv

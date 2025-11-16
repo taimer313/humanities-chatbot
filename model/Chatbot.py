@@ -7,10 +7,11 @@ Original file is located at
     https://colab.research.google.com/drive/1QAp9Od9USLrc6DBTlB3zeDzq0kJPh0Ox
 """
 
-!pip install google-generativeai
+# !pip install google-generativeai
 import google.generativeai as genai
-
-GEMINI_API_KEY = "AIzaSyCM5qTSaachM8wqREPjmUJkhI2T0Rgzuzg"
+import os
+# GEMINI_API_KEY = "AIzaSyCM5qTSaachM8wqREPjmUJkhI2T0Rgzuzg"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
 
@@ -62,4 +63,4 @@ def chat():
         except Exception as e:
             print("Error:", e)
 
-chat()
+# chat()
