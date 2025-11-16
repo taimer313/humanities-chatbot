@@ -50,38 +50,41 @@ IMPORTANT RULES:
 @st.cache_resource
 def load_model_and_session():
     try:
-        # First, let's list available models to see what's working
-        available_models = genai.list_models()
-        st.sidebar.write("Available models:")
-        for model in available_models:
-            if 'generateContent' in model.supported_generation_methods:
-                st.sidebar.write(f"- {model.name}")
-        
-        # Try the most common working models
+        # Use one of the available models from your list
         model_names_to_try = [
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-pro-latest", 
-            "gemini-1.0-pro",
-            "models/gemini-1.5-flash-latest"
+            "models/gemini-2.0-flash-001",  # Stable flash model
+            "models/gemini-2.0-flash",      # Alternative flash
+            "models/gemini-2.5-flash",      # Newer flash model
+            "models/gemini-pro-latest",     # Pro model
         ]
         
         model = None
+        working_model = None
+        
         for model_name in model_names_to_try:
             try:
                 model = genai.GenerativeModel(
                     model_name,
                     system_instruction=HUMANITIES_PROMPT
                 )
-                # Test if model works
-                model.start_chat(history=[])
-                st.sidebar.success(f"Using model: {model_name}")
-                break
-            except Exception:
+                # Test if model works with a simple message
+                test_chat = model.start_chat(history=[])
+                test_response = test_chat.send_message("Hello")
+                if test_response.text:
+                    working_model = model_name
+                    st.sidebar.success(f"✅ Using model: {model_name}")
+                    break
+            except Exception as e:
+                st.sidebar.write(f"❌ {model_name} failed: {str(e)[:50]}...")
                 continue
                 
-        if model is None:
-            st.error("No working model found. Please check available models above.")
-            return None
+        if working_model is None:
+            st.error("No working model found. Trying gemini-2.0-flash-001 as fallback.")
+            model = genai.GenerativeModel(
+                "models/gemini-2.0-flash-001",
+                system_instruction=HUMANITIES_PROMPT
+            )
+            working_model = "models/gemini-2.0-flash-001 (fallback)"
             
         return model.start_chat(history=[])
     except Exception as e:
@@ -96,9 +99,6 @@ chat_session = load_model_and_session()
 # ============================
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-
-if "user_input" not in st.session_state:
-    st.session_state.user_input = ""
 
 
 # ============================
@@ -122,7 +122,7 @@ if submitted and user_input.strip():
 
     try:
         if chat_session is None:
-            st.error("Chat session not initialized. Please check the model configuration.")
+            st.error("Chat session not initialized. Please refresh the page.")
         else:
             with st.spinner("Thinking..."):
                 response = chat_session.send_message(user_msg)
@@ -152,5 +152,5 @@ if st.button("Clear Chat"):
 
 # Display available models in sidebar for debugging
 st.sidebar.subheader("Debug Info")
-if st.sidebar.button("Refresh Available Models"):
+if st.sidebar.button("Refresh App"):
     st.rerun()
