@@ -49,12 +49,40 @@ IMPORTANT RULES:
 # ============================
 @st.cache_resource
 def load_model_and_session():
-    # Try different model names - use one that works
     try:
-        model = genai.GenerativeModel(
-            "gemini-1.5-flash",  # Try this model name
-            system_instruction=HUMANITIES_PROMPT
-        )
+        # First, let's list available models to see what's working
+        available_models = genai.list_models()
+        st.sidebar.write("Available models:")
+        for model in available_models:
+            if 'generateContent' in model.supported_generation_methods:
+                st.sidebar.write(f"- {model.name}")
+        
+        # Try the most common working models
+        model_names_to_try = [
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-pro-latest", 
+            "gemini-1.0-pro",
+            "models/gemini-1.5-flash-latest"
+        ]
+        
+        model = None
+        for model_name in model_names_to_try:
+            try:
+                model = genai.GenerativeModel(
+                    model_name,
+                    system_instruction=HUMANITIES_PROMPT
+                )
+                # Test if model works
+                model.start_chat(history=[])
+                st.sidebar.success(f"Using model: {model_name}")
+                break
+            except Exception:
+                continue
+                
+        if model is None:
+            st.error("No working model found. Please check available models above.")
+            return None
+            
         return model.start_chat(history=[])
     except Exception as e:
         st.error(f"Error loading model: {e}")
@@ -73,23 +101,21 @@ if "user_input" not in st.session_state:
     st.session_state.user_input = ""
 
 
-def reset_input():
-    st.session_state.user_input = ""
-
-
 # ============================
-# INPUT BOX
+# INPUT BOX WITH FORM
 # ============================
-user_input = st.text_input(
-    "Ask something:",
-    key="user_input",
-    placeholder="Type here...",
-)
+with st.form("chat_form", clear_on_submit=True):
+    user_input = st.text_input(
+        "Ask something:",
+        placeholder="Type here...",
+        key="user_input_form"
+    )
+    submitted = st.form_submit_button("Send")
 
 # ============================
 # HANDLE MESSAGE
 # ============================
-if user_input and user_input.strip():
+if submitted and user_input.strip():
     user_msg = user_input.strip()
 
     st.session_state.chat_history.append(("You", user_msg))
@@ -104,14 +130,10 @@ if user_input and user_input.strip():
             
             st.session_state.chat_history.append(("Bot", bot_reply))
             
-            # Reset input after successful processing
-            reset_input()
-            
     except Exception as e:
         error_msg = f"⚠️ Error: {str(e)}"
         st.session_state.chat_history.append(("Bot", error_msg))
-        st.error(f"Detailed error: {e}")
-        reset_input()
+        st.error(f"API Error: {e}")
 
 
 # ============================
@@ -126,4 +148,9 @@ for speaker, msg in st.session_state.chat_history:
 # Add a clear button
 if st.button("Clear Chat"):
     st.session_state.chat_history = []
+    st.rerun()
+
+# Display available models in sidebar for debugging
+st.sidebar.subheader("Debug Info")
+if st.sidebar.button("Refresh Available Models"):
     st.rerun()
